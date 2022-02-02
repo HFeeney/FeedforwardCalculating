@@ -41,16 +41,30 @@ public class AngleMotor extends SubsystemBase {
     return encoderVelocity;
   }
 
+  private void updateEncoderVelocity() {
+    double shiftedPrevious = prevPosition - getEncoderPosition();
+    double positionChange;
+
+    if (shiftedPrevious < 0)
+      shiftedPrevious += CPR;
+    
+    if (shiftedPrevious < CPR / 2.0)
+      positionChange = -1 * shiftedPrevious;
+    else
+      positionChange = CPR - shiftedPrevious;
+
+    encoderVelocity = positionChange / 0.02;
+    prevPosition = getEncoderPosition();
+  }
+
 
   @Override
   public void periodic() {
-    double positionDifference = getEncoderPosition() - prevPosition >= 0.0 ? getEncoderPosition() - prevPosition : getEncoderPosition() + CPR - prevPosition;
-    encoderVelocity = positionDifference / 0.02; 
+    updateEncoderVelocity();
     
     SmartDashboard.putNumber("Set Voltage", voltage);
     SmartDashboard.putNumber("Encoder Position", getEncoderPosition());
     SmartDashboard.putNumber("Encoder Velocity", getEncoderVelocity());
     
-    prevPosition = getEncoderPosition();
   }
 }

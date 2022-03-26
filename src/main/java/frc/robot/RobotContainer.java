@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
@@ -16,8 +17,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.subsystems.AngleMotor;
+import frc.robot.subsystems.Shooter;
+import frc.robot.util.Characterizable;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -27,7 +31,9 @@ import frc.robot.subsystems.AngleMotor;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private AngleMotor angleMotor = new AngleMotor();
+  // AngleMotor angleMotor = new AngleMotor();
+  Shooter shooter = new Shooter();
+  Subsystem testSystem = shooter;
 
   private Joystick stick = new Joystick(0);
   private JoystickButton a = new JoystickButton(stick, 1);
@@ -37,25 +43,29 @@ public class RobotContainer {
 
   private ArrayList<Double> speeds = new ArrayList<>(); 
   private HashMap<Double, Double> voltsToSpeed = new HashMap<>();
-  static double voltage = 1;
+  public static double voltage = 1;
   static double phaseDuration = 5;
-
-  private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(1.05, 1.537);
+  public static double rampDuration = 3.0;
+  // private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(1.05, 1.537);
+  private final SimpleMotorFeedforward ff = new SimpleMotorFeedforward(0.1860, 0.002110);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the button bindings
     configureButtonBindings();
 
-    angleMotor.setDefaultCommand(
+    testSystem.setDefaultCommand(
       new RunCommand(
         () -> {
-          // angleMotor.setVoltage(stick.getRawAxis(0) * 1.5);
-          double setSpeed = ff.calculate(stick.getRawAxis(0) * 5);
-          SmartDashboard.putNumber("Set Speed", stick.getRawAxis(0) * 5);
-          angleMotor.setVoltage(setSpeed);
+          // ((Characterizable) testSystem).setVoltage(stick.getRawAxis(0) * 10);
+
+          double setSpeed = stick.getRawAxis(0) * 6000;
+          double ffOutput = ff.calculate(setSpeed);
+          SmartDashboard.putNumber("Set Speed", setSpeed);
+          SmartDashboard.putNumber("ffOutput", ffOutput);
+          ((Characterizable) testSystem).setVoltage(ffOutput);
         }, 
-        angleMotor
+        testSystem
       )
     );
   }
@@ -71,14 +81,20 @@ public class RobotContainer {
       new SequentialCommandGroup(
         new RunCommand(
           () -> {
-            angleMotor.setVoltage(voltage);
-            speeds.add(angleMotor.getEncoderVelocity());
+            ((Characterizable) testSystem).setVoltage(voltage);
           }, 
-          angleMotor
+          testSystem
+        ).withTimeout(rampDuration),
+        new RunCommand(
+          () -> {
+            ((Characterizable) testSystem).setVoltage(voltage);
+            speeds.add(((Characterizable) testSystem).getVelocity());
+          }, 
+          testSystem
         ).withTimeout(phaseDuration),
         new InstantCommand(
           () -> {
-            angleMotor.setVoltage(0);
+            ((Characterizable) testSystem).setVoltage(0);
             int numSpeeds = speeds.size();
             double avg = 0.0;
             while (!speeds.isEmpty())
@@ -93,19 +109,19 @@ public class RobotContainer {
 
     b.whenPressed(
       new InstantCommand(
-        () -> {voltage++;}
+        () -> {voltage+= 0.5;}
       )
     );
 
     x.whenPressed(
       new InstantCommand(
-        () -> {voltage--;}
+        () -> {voltage-= 0.5;}
       )
     );
 
     y.whenPressed(
       new InstantCommand(
-        () -> {SmartDashboard.putNumber("Current Voltage", voltage);}
+        () -> {voltage *= -1;}
       )
     );
   }

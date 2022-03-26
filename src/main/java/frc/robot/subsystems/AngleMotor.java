@@ -5,25 +5,35 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.Characterizable;
 
-public class AngleMotor extends SubsystemBase {
+public class AngleMotor extends SubsystemBase implements Characterizable{
 
-  private WPI_TalonSRX motor;
+  private CANSparkMax motor;
   private AnalogInput encoder;
+  private AnalogInput a;
+  private AnalogInput b;
+  private AnalogInput c;
   private double prevPosition;
   private double encoderVelocity = 0;
   private double voltage = 0;
+  private double prevVelocity = 0;
   
-  private static final double CPR = 4.927;
+  private static final double CPR = 4.957;
   
   /** Creates a new AngleMotor. */
   public AngleMotor() {
-    motor = new WPI_TalonSRX(0);
-    encoder = new AnalogInput(3);
+    motor = new CANSparkMax(4, MotorType.kBrushless);
+    encoder = new AnalogInput(1);
+    // a = new AnalogInput(1);
+    // b = new AnalogInput(2);
+    // c = new AnalogInput(3);
     prevPosition = getEncoderPosition();
   }
 
@@ -33,11 +43,11 @@ public class AngleMotor extends SubsystemBase {
   }
 
   public double getEncoderPosition() {
-    return encoder.getAverageVoltage();
+    return CPR - encoder.getAverageVoltage();
   }
 
   // in encoder ticks / second
-  public double getEncoderVelocity() {
+  public double getVelocity() {
     return encoderVelocity;
   }
 
@@ -61,10 +71,16 @@ public class AngleMotor extends SubsystemBase {
   @Override
   public void periodic() {
     updateEncoderVelocity();
+    double encoderVelocity = getVelocity();
     
     SmartDashboard.putNumber("Set Voltage", voltage);
     SmartDashboard.putNumber("Encoder Position", getEncoderPosition());
-    SmartDashboard.putNumber("Encoder Velocity", getEncoderVelocity());
+    // SmartDashboard.putNumber("Encoder 1 Position", a.getAverageVoltage());
+    // SmartDashboard.putNumber("Encoder 2 Position", b.getAverageVoltage());
+    // SmartDashboard.putNumber("Encoder 3 Position", c.getAverageVoltage());
+    SmartDashboard.putNumber("Encoder Velocity", getVelocity());
+    SmartDashboard.putNumber("Encoder Acceleration", (encoderVelocity - prevVelocity) / 0.02);
     
+    prevVelocity = encoderVelocity;
   }
 }
